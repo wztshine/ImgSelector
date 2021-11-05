@@ -9,6 +9,7 @@ from PyQt5.QtWidgets import QMainWindow, QFileDialog, QComboBox, QMessageBox
 from PyQt5.QtCore import Qt, QThread,pyqtSignal
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.Qt import QApplication
+from PyQt5.QtGui import QIcon
 
 
 class Thread_1(QThread):
@@ -72,48 +73,65 @@ class Ui_MainWindow(QMainWindow):
 
     def setupUi(self):
         self.resize(592, 436)
+        icon = QIcon('./resource/open.png')
 
         # 选择图片文件夹按钮
         self.pushButton = QtWidgets.QPushButton(self)
-        self.pushButton.setGeometry(QtCore.QRect(80, 60, 71, 21))
+        self.pushButton.setGeometry(QtCore.QRect(80, 50, 71, 30))  # QRect(x,y, width, height)
 
         # 用来显示文件夹路径
         self.lineEdit = QtWidgets.QLineEdit(self)
         self.lineEdit.setToolTip("左侧按钮选择你要处理的源图片文件夹")
-        self.lineEdit.setGeometry(QtCore.QRect(160, 50, 261, 31))
+        self.lineEdit.setGeometry(QtCore.QRect(160, 50, 261, 30))
+        self.lineEdit.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)  # 禁止编辑此编辑框，只能通过左侧按钮选择文件夹
 
-        # 选择目标文件夹按钮
-        self.pushButton_2 = QtWidgets.QPushButton(self)
-        self.pushButton_2.setGeometry(QtCore.QRect(80, 100, 71, 21))
-        # 用来显示目标文件夹路径
-        self.lineEdit_2 = QtWidgets.QLineEdit(self)
-        self.lineEdit_2.setToolTip("左侧按钮选择你想要将图片移动或复制到的文件夹")
-        self.lineEdit_2.setGeometry(QtCore.QRect(160, 90, 261, 31))
+        # 打开当前的文件夹
+        self.openBtn = QtWidgets.QPushButton(self)
+        self.openBtn.setGeometry(430, 53, 24, 24)
+        self.openBtn.setIcon(icon)
+        self.openBtn.clicked.connect(lambda: self.open_folder(self.value.img_path))
+        self.openBtn.setToolTip("打开当前选中的文件夹")
 
         # 勾选框，是否递归文件夹
         self.checkBox = QtWidgets.QCheckBox(self)
-        self.checkBox.setGeometry(QtCore.QRect(440, 60, 81, 21))
+        self.checkBox.setGeometry(QtCore.QRect(470, 50, 81, 30))
+
+        # 选择目标文件夹按钮
+        self.pushButton_2 = QtWidgets.QPushButton(self)
+        self.pushButton_2.setGeometry(QtCore.QRect(80, 90, 71, 30))
+
+        # 用来显示目标文件夹路径
+        self.lineEdit_2 = QtWidgets.QLineEdit(self)
+        self.lineEdit_2.setToolTip("左侧按钮选择你想要将图片移动或复制到的文件夹")
+        self.lineEdit_2.setGeometry(QtCore.QRect(160, 90, 261, 30))
+        self.lineEdit_2.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)  # 禁止编辑此编辑框
+        # 打开目标文件夹按钮
+        self.openBtn2 = QtWidgets.QPushButton(self)
+        self.openBtn2.setGeometry(430, 93, 24, 24)
+        self.openBtn2.setIcon(icon)
+        self.openBtn2.clicked.connect(lambda: self.open_folder(self.value.new_path))
+        self.openBtn2.setToolTip("打开当前选中的文件夹")
 
         # 长宽比 label
         self.label = QtWidgets.QLabel(self)
-        self.label.setGeometry(QtCore.QRect(80, 140, 50, 16))
+        self.label.setGeometry(QtCore.QRect(80, 130, 50, 30))
         # 长宽比 输入框
         self.lineEdit_3 = QtWidgets.QLineEdit(self)
         self.lineEdit_3.setToolTip('示例：4/3 \n长宽比例条件，和下面的像素长宽这两个条件，只要有一个不满足，图片都不会选中。\n留空则忽略此条件。')
-        self.lineEdit_3.setGeometry(QtCore.QRect(160, 130, 261, 31))
+        self.lineEdit_3.setGeometry(QtCore.QRect(160, 130, 261, 30))
 
         # 像素 label
         self.label_2 = QtWidgets.QLabel(self)
-        self.label_2.setGeometry(QtCore.QRect(80, 180, 60, 12))
+        self.label_2.setGeometry(QtCore.QRect(80, 170, 60, 30))
 
         # 像素输入框
         self.lineEdit_4 = QtWidgets.QLineEdit(self)
         self.lineEdit_4.setToolTip("示例：1920/1080 \n像素长宽值，和上面的长宽比例这两个条件，只要有一个不满足，图片都不会选中。\n留空则忽略此条件")
-        self.lineEdit_4.setGeometry(QtCore.QRect(160, 170, 261, 31))
+        self.lineEdit_4.setGeometry(QtCore.QRect(160, 170, 261, 30))
 
         # 长宽比 符号
         self.comboBox = QComboBox(self)
-        self.comboBox.setGeometry(QtCore.QRect(440, 130, 69, 22))
+        self.comboBox.setGeometry(QtCore.QRect(430, 133, 69, 24))
         self.comboBox.setToolTip("大于，意味着图片越宽越矮；反之图片越窄越高")
         self.comboBox.addItem(">")
         self.comboBox.addItem(">=")
@@ -123,7 +141,7 @@ class Ui_MainWindow(QMainWindow):
 
         # 像素 符号
         self.comboBox_2 = QComboBox(self)
-        self.comboBox_2.setGeometry(QtCore.QRect(440, 170, 69, 22))
+        self.comboBox_2.setGeometry(QtCore.QRect(430, 173, 69, 24))
         self.comboBox_2.setToolTip("大于，意味着目标图片的长和宽都要大于输入的长宽值")
         self.comboBox_2.addItem(">")
         self.comboBox_2.addItem(">=")
@@ -163,6 +181,10 @@ class Ui_MainWindow(QMainWindow):
         self.pushButton_2.setText("目标文件夹")
         self.pushButton_3.setText("复制")
         self.pushButton_4.setText("移动")
+
+    def open_folder(self, path):
+        if os.path.exists(path):
+            os.system(f"start {path}")
 
     def width_height_sign(self, text):
         """
