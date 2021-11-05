@@ -3,6 +3,7 @@ import shutil
 import os
 import platform
 import sys
+import images
 
 from PIL import Image
 from PyQt5.QtWidgets import QMainWindow, QFileDialog, QComboBox, QMessageBox
@@ -73,7 +74,7 @@ class Ui_MainWindow(QMainWindow):
 
     def setupUi(self):
         self.resize(592, 436)
-        icon = QIcon('./resource/open.png')
+        icon = QIcon(':/resource/open.png')
 
         # 选择图片文件夹按钮
         self.pushButton = QtWidgets.QPushButton(self)
@@ -89,6 +90,7 @@ class Ui_MainWindow(QMainWindow):
         self.openBtn = QtWidgets.QPushButton(self)
         self.openBtn.setGeometry(430, 53, 24, 24)
         self.openBtn.setIcon(icon)
+        # connect 只能接受函数名作为参数，此处需要传递一个参数，所以用lambda封装一层
         self.openBtn.clicked.connect(lambda: self.open_folder(self.value.img_path))
         self.openBtn.setToolTip("打开当前选中的文件夹")
 
