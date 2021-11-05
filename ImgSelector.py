@@ -12,7 +12,7 @@ from PyQt5.Qt import QApplication
 
 
 class Thread_1(QThread):
-    sig = pyqtSignal(str, str)  # 信号，发送处理进度
+    sig = pyqtSignal(str, str, str)  # 信号，发送处理进度
     err = pyqtSignal(str)  # 信号，发送 error 信息
 
     def __init__(self, images, value, mode):
@@ -23,23 +23,31 @@ class Thread_1(QThread):
         self.len = len(self.images)
 
     def run(self):
-        res = ''
+        res = self.mode
         n = 0
-        try:
-            if self.mode == 'copy':
-                for img in self.images:
-                    n += 1
+        if self.mode == 'copy':
+            for img in self.images:
+                n += 1
+                try:
                     shutil.copy(img, self.value.new_path)
-                    self.sig.emit(str(n), str(self.len))  # 发送当前执行进度数据
-            elif self.mode == 'move':
-                for img in self.images:
-                    n+=1
+                    self.sig.emit(str(n), str(self.len), 'successed.')  # 发送当前执行进度数据
+                except Exception as e:
+                    res += '\n'
+                    res += str(e)
+                    self.sig.emit(str(n), str(self.len), 'error.')
+                    print(e)
+
+        elif self.mode == 'move':
+            for img in self.images:
+                n+=1
+                try:
                     shutil.move(img, self.value.new_path)
-                    self.sig.emit(str(n), str(self.len))
-        except Exception as e:
-            res += str(e)
-            res += '\n'
-            print(e)
+                    self.sig.emit(str(n), str(self.len), 'successed.')
+                except Exception as e:
+                    res += '\n'
+                    res += str(e)
+                    self.sig.emit(str(n), str(self.len), 'error.')
+                    print(e)
         self.err.emit(res)  # 发送错误信息
 
 
@@ -257,29 +265,26 @@ class Ui_MainWindow(QMainWindow):
                 pass
         try:
             sender = self.sender()  # 获取是哪个按钮出发了此函数
-            if sender == self.pushButton_3 or sender == self.pushButton_4:
-                if not (self.value.new_path and self.value.img_path):  # 如果两个文件夹都是空的
-                    QMessageBox.question(self, 'Message',"图片文件夹和目标文件夹均不能为空！", QMessageBox.Yes)
-                else:
-                    # 按钮置灰，不可再次点击
-                    self.pushButton_3.setEnabled(False)
-                    self.pushButton_4.setEnabled(False)
+            if not (self.value.new_path and self.value.img_path):  # 如果两个文件夹都是空的
+                QMessageBox.question(self, 'Message',"图片文件夹和目标文件夹均不能为空！", QMessageBox.Yes)
+            else:
+                # 按钮置灰，不可再次点击
+                sender.setEnabled(False)
 
-                    if sender == self.pushButton_3:  # 复制按钮
-                        self.statusBar().showMessage('Copying...')  # 底部状态栏
-                        self.thread = Thread_1(file_list, self.value, 'copy')  # 创建线程
-                        self.thread.sig.connect(self.copy_show)
-                        self.thread.err.connect(self.thread_err)
-                        self.thread.start()
-                    else:  # 移动按钮
-                        self.statusBar().showMessage('Moving...')
-                        self.thread = Thread_1(file_list, self.value, 'move')
-                        self.thread.sig.connect(self.move_show)
-                        self.thread.err.connect(self.thread_err)
-                        self.thread.start()
-
+                if sender == self.pushButton_3:  # 复制按钮
+                    self.statusBar().showMessage('Copying...')  # 底部状态栏
+                    self.thread = Thread_1(file_list, self.value, 'copy')  # 创建线程
+                    self.thread.sig.connect(self.copy_show)
+                    self.thread.err.connect(self.thread_err)
+                    self.thread.start()
+                else:  # 移动按钮
+                    self.statusBar().showMessage('Moving...')
+                    self.thread = Thread_1(file_list, self.value, 'move')
+                    self.thread.sig.connect(self.move_show)
+                    self.thread.err.connect(self.thread_err)
+                    self.thread.start()
         except Exception as e:
-            print(e)
+            QMessageBox.information(self, 'Errors', str(e), QMessageBox.Yes)
 
     def thread_err(self, error):
         """
@@ -287,24 +292,26 @@ class Ui_MainWindow(QMainWindow):
         :param error:
         :return:
         """
-        if error:
+        if error not in ['copy', 'move']:
             QMessageBox.information(self, 'Errors', error, QMessageBox.Yes)
         self.statusBar().showMessage("Ready")
         # 按钮置为可点击状态
-        self.pushButton_3.setEnabled(True)
-        self.pushButton_4.setEnabled(True)
+        if error.lower().startswith("copy"):
+            self.pushButton_3.setEnabled(True)
+        else:
+            self.pushButton_4.setEnabled(True)
 
-    def copy_show(self, cur, all):
+    def copy_show(self, cur, all, msg):
         """
         将从线程中的信号 emit 过来的值，显示在状态栏，可以查看处理进度
         :param cur:
         :param all:
         :return:
         """
-        self.statusBar().showMessage(f"Copying {cur} of {all}")
+        self.statusBar().showMessage(f"Copying {cur} of {all} {msg}")
 
-    def move_show(self, cur, all):
-        self.statusBar().showMessage(f"Moving {cur} of {all}")
+    def move_show(self, cur, all, msg):
+        self.statusBar().showMessage(f"Moving {cur} of {all} {msg}")
 
 
 def get_desktop_path():
