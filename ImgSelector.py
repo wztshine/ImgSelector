@@ -12,6 +12,9 @@ from PyQt5 import QtCore, QtWidgets
 from PyQt5.Qt import QApplication
 from PyQt5.QtGui import QIcon
 
+from PIL import ImageFile
+Image.MAX_IMAGE_PIXELS = None
+
 
 class Thread_1(QThread):
     sig = pyqtSignal(str, str, str)  # 信号，发送处理进度
@@ -75,7 +78,6 @@ class Ui_MainWindow(QMainWindow):
     def setupUi(self):
         self.resize(592, 436)
         icon = QIcon(':/resource/open.png')
-
         # 选择图片文件夹按钮
         self.pushButton = QtWidgets.QPushButton(self)
         self.pushButton.setGeometry(QtCore.QRect(80, 50, 71, 30))  # QRect(x,y, width, height)
@@ -114,12 +116,19 @@ class Ui_MainWindow(QMainWindow):
         self.openBtn2.clicked.connect(lambda: self.open_folder(self.value.new_path))
         self.openBtn2.setToolTip("打开当前选中的文件夹")
 
+        # 互换路径按钮
+        self.switchBtn = QtWidgets.QPushButton(self)
+        self.switchBtn.setGeometry(470,93,60,24)
+        self.switchBtn.setText("互换路径")
+        self.switchBtn.clicked.connect(self.switch_path)
+        self.switchBtn.setToolTip("点击互换图片路径和目标路径")
+
         # 长宽比 label
         self.label = QtWidgets.QLabel(self)
         self.label.setGeometry(QtCore.QRect(80, 130, 50, 30))
         # 长宽比 输入框
         self.lineEdit_3 = QtWidgets.QLineEdit(self)
-        self.lineEdit_3.setToolTip('示例：4/3 \n长宽比例条件，和下面的像素长宽这两个条件，只要有一个不满足，图片都不会选中。\n留空则忽略此条件。')
+        self.lineEdit_3.setToolTip('示例：16/9; 1 \n长宽比例条件，可以是比值或具体数字，和下面的像素长宽这两个条件，只要有一个不满足，图片都不会选中。\n留空则忽略此条件。')
         self.lineEdit_3.setGeometry(QtCore.QRect(160, 130, 261, 30))
 
         # 像素 label
@@ -128,7 +137,7 @@ class Ui_MainWindow(QMainWindow):
 
         # 像素输入框
         self.lineEdit_4 = QtWidgets.QLineEdit(self)
-        self.lineEdit_4.setToolTip("示例：1920/1080 \n像素长宽值，和上面的长宽比例这两个条件，只要有一个不满足，图片都不会选中。\n留空则忽略此条件")
+        self.lineEdit_4.setToolTip("示例：1920/1080; 1920/* \n像素长宽值，*代表忽略长或宽，和上面的长宽比例这两个条件，只要有一个不满足，图片都不会选中。\n留空则忽略此条件")
         self.lineEdit_4.setGeometry(QtCore.QRect(160, 170, 261, 30))
 
         # 长宽比 符号
@@ -160,8 +169,8 @@ class Ui_MainWindow(QMainWindow):
         self.pushButton_4.setGeometry(QtCore.QRect(320, 280, 75, 23))
 
         # 给各个按钮绑定槽函数,一旦 UI 上各控件被点击或改动，就触发函数
-        self.pushButton.clicked.connect(self.showDialog)
-        self.pushButton_2.clicked.connect(self.showDialog2)
+        self.pushButton.clicked.connect(self.select_img_path)
+        self.pushButton_2.clicked.connect(self.select_target_path)
         self.checkBox.stateChanged.connect(self.recursive)
         self.lineEdit_3.textChanged.connect(self.width_height)
         self.lineEdit_4.textChanged.connect(self.width_height_pixel)
@@ -183,6 +192,12 @@ class Ui_MainWindow(QMainWindow):
         self.pushButton_2.setText("目标文件夹")
         self.pushButton_3.setText("复制")
         self.pushButton_4.setText("移动")
+
+    def switch_path(self):
+        self.value.img_path, self.value.new_path = self.value.new_path, self.value.img_path
+        self.lineEdit.setText(self.value.img_path)
+        self.lineEdit_2.setText(self.value.new_path)
+
 
     def open_folder(self, path):
         if os.path.exists(path):
@@ -236,23 +251,31 @@ class Ui_MainWindow(QMainWindow):
             self.value.recursive = False
         # print(self.value.recursive)
 
-    def showDialog(self):
+    def select_img_path(self):
         """
         文件夹对话框，选择图片所在的文件夹
         :return:
         """
-        fname = QFileDialog.getExistingDirectory(self, 'Choose folder', DEFAULT_IMG_PATH)
-        self.value.img_path = fname
-        self.lineEdit.setText(fname)
+        if self.value.img_path:
+            fname = QFileDialog.getExistingDirectory(self, 'Choose folder', self.value.img_path)
+        else:
+            fname = QFileDialog.getExistingDirectory(self, 'Choose folder', DEFAULT_IMG_PATH)
+        if fname:
+            self.value.img_path = fname
+            self.lineEdit.setText(fname)
 
-    def showDialog2(self):
+    def select_target_path(self):
         """
         文件夹对话框，选择图片要移动或复制的新的文件夹
         :return:
         """
-        fname = QFileDialog.getExistingDirectory(self, 'Choose folder', DEFAULT_IMG_PATH)
-        self.value.new_path = fname
-        self.lineEdit_2.setText(fname)
+        if self.value.new_path:
+            fname = QFileDialog.getExistingDirectory(self, 'Choose folder', self.value.new_path)
+        else:
+            fname = QFileDialog.getExistingDirectory(self, 'Choose folder', DEFAULT_IMG_PATH)
+        if fname:
+            self.value.new_path = fname
+            self.lineEdit_2.setText(fname)
 
     def calculate(self):
         """
@@ -278,10 +301,17 @@ class Ui_MainWindow(QMainWindow):
                 if self.value.width_height:
                     width_height_res = eval(str(width / height)+ self.value.width_height_sign + self.value.width_height)
                 if self.value.width_height_pixel:  # 像素值 条件
-                    width = eval(str(width) + self.value.width_height_pixel_sign + self.value.width_height_pixel.split('/')[0])
-                    height = eval(str(height) + self.value.width_height_pixel_sign + self.value.width_height_pixel.split('/')[1])
+                    if self.value.width_height_pixel.startswith("*"):
+                        width = True
+                    else:
+                        width = eval(
+                            str(width) + self.value.width_height_pixel_sign + self.value.width_height_pixel.split('/')[
+                                0])
+                    if self.value.width_height_pixel.endswith("*"):
+                        height = True
+                    else:
+                        height = eval(str(height) + self.value.width_height_pixel_sign + self.value.width_height_pixel.split('/')[1])
                     width_height_pix_res = width and height
-
                 if width_height_res and width_height_pix_res:  # 意味着两个条件都满足，则图片符合条件（条件为空，默认是True)
                     file_list.append(str(file))
             except Exception as e:
